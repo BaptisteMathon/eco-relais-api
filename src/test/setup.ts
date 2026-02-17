@@ -1,6 +1,5 @@
 /**
- * Test setup – load env and set NODE_ENV so app uses test config
+ * Test setup – set NODE_ENV so app uses test config.
+ * Load .env via npm script if needed: node -r dotenv/config node_modules/.bin/vitest run
  */
-import 'dotenv/config';
-
 process.env.NODE_ENV = 'test';
