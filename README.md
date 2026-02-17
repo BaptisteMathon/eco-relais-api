@@ -1,39 +1,39 @@
 # Eco-Relais API
 
-Production-ready Node.js REST API for Eco-Relais, a hyperlocal package delivery platform.
+API REST Node.js pour **Eco-Relais**, plateforme de livraison hyperlocale.
 
-**Development:** The `dev` branch is the integration branch; feature branches are merged here with `--no-ff`. Do not push to `main` from this workflow.
+**Développement :** La branche `dev` est la branche d’intégration ; les branches de fonctionnalités y sont fusionnées avec `--no-ff`. Ne pas pousser sur `main` dans ce workflow.
 
-## Project documentation
+## Documentation du projet
 
-- **Project overview & codebase guide:** `docs/PROJECT.md`
-- **Full API reference:** `docs/API.md`
+- **Vue d’ensemble et guide du code :** `docs/PROJECT.md`
+- **Référence API complète :** `docs/API.md`
 
-## Tech stack
+## Stack technique
 
-- **Runtime:** Node.js 18+ with TypeScript
-- **Framework:** Express.js
-- **Database:** PostgreSQL with PostGIS (geospatial queries)
-- **Auth:** JWT + bcrypt
-- **Payments:** Stripe Connect
-- **Storage:** Multer + AWS S3
-- **Push:** Firebase Admin SDK
-- **Cache/Sessions:** Redis
-- **Security:** Helmet, CORS, rate limiting (express-rate-limit), express-validator
-- **Docs:** Swagger (swagger-jsdoc + swagger-ui-express)
+- **Runtime :** Node.js 18+ avec TypeScript
+- **Framework :** Express.js
+- **Base de données :** PostgreSQL avec PostGIS (requêtes géospatiales)
+- **Auth :** JWT + bcrypt
+- **Paiements :** Stripe Connect
+- **Stockage :** Multer + AWS S3
+- **Push :** Firebase Admin SDK
+- **Cache / sessions :** Redis
+- **Sécurité :** Helmet, CORS, rate limiting (express-rate-limit), express-validator
+- **Documentation :** Swagger (swagger-jsdoc + swagger-ui-express)
 
-## Setup
+## Installation et démarrage
 
-1. **Environment**
+1. **Environnement**
 
    ```bash
    cp .env.example .env
-   # Edit .env with your secrets (JWT_SECRET, PG_*, STRIPE_*, AWS_*, etc.)
+   # Éditer .env avec vos secrets (JWT_SECRET, PG_*, STRIPE_*, AWS_*, etc.)
    ```
 
 2. **PostgreSQL + PostGIS**
 
-   Create a database and enable PostGIS:
+   Créer une base et activer PostGIS :
 
    ```sql
    CREATE DATABASE eco_relais;
@@ -42,82 +42,82 @@ Production-ready Node.js REST API for Eco-Relais, a hyperlocal package delivery 
    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
    ```
 
-3. **Run migrations**
+3. **Migrations**
 
    ```bash
    npm run migrate
    ```
 
-4. **Seed (optional)**
+4. **Seed (optionnel)**
 
    ```bash
    npm run seed
    ```
 
-   Creates test users: `client@eco-relais.test`, `partner@eco-relais.test`, `admin@eco-relais.test` (password: `Password123!`).
+   Crée des utilisateurs de test : `client@eco-relais.test`, `partner@eco-relais.test`, `admin@eco-relais.test` (mot de passe : `Password123!`).
 
-5. **Start**
-
-   ```bash
-   npm run dev   # development
-   npm start     # production (after npm run build)
-   ```
-
-- API base: `http://localhost:3000/api`
-- If the frontend runs on another port (e.g. Next.js on 3001), set `CORS_ORIGIN=http://localhost:3001` (or add it comma-separated) in `.env` so login works.
-- Health: `GET /health`
-- Swagger: `http://localhost:3000/api-docs` (when `NODE_ENV !== 'production'` or `SWAGGER_ENABLED=true`)
-- **Full API reference (endpoints, request/response, status codes):** [docs/API.md](docs/API.md)
-
-## Testing
-
-API integration tests use **Vitest** and **Supertest**. They hit the real app and database.
-
-1. Ensure PostgreSQL is running and migrations have been applied (steps 2–3 above). Tests use the same `PG_*` env vars as development; you can use a separate DB, e.g. `PG_DATABASE=eco_relais_test`.
-2. Run tests:
+5. **Démarrer**
 
    ```bash
-   npm run test        # single run
-   npm run test:watch  # watch mode
+   npm run dev   # développement
+   npm start    # production (après npm run build)
    ```
 
-   Tests cover: health, auth (register/login/validation), users profile, missions (create/list/accept/collect/deliver/cancel), payments (auth and validation), notifications. Stripe/AWS/Firebase are optional; tests that need them may be skipped or fail with a clear error if not configured.
+- Base API : `http://localhost:3000/api`
+- Si le frontend tourne sur un autre port (ex. Next.js sur 3001), définir `CORS_ORIGIN=http://localhost:3001` (ou plusieurs origines séparées par des virgules) dans `.env` pour que la connexion fonctionne.
+- Santé : `GET /health`
+- Swagger : `http://localhost:3000/api-docs` (quand `NODE_ENV !== 'production'` ou `SWAGGER_ENABLED=true`)
+- **Référence API détaillée (endpoints, requêtes/réponses, codes de statut) :** [docs/API.md](docs/API.md)
 
-## Main endpoints
+## Tests
 
-| Method | Endpoint | Description |
+Les tests d’intégration API utilisent **Vitest** et **Supertest**. Ils appellent l’app et la base réelles.
+
+1. S’assurer que PostgreSQL tourne et que les migrations ont été appliquées (étapes 2–3 ci-dessus). Les tests utilisent les mêmes variables `PG_*` que le dev ; vous pouvez utiliser une base dédiée, ex. `PG_DATABASE=eco_relais_test`.
+2. Lancer les tests :
+
+   ```bash
+   npm run test        # une exécution
+   npm run test:watch  # mode watch
+   ```
+
+   Couverture : health, auth (register/login/validation), profil utilisateur, missions (création/liste/acceptation/collecte/livraison/annulation), paiements (auth et validation), notifications. Stripe/AWS/Firebase sont optionnels ; les tests qui en dépendent peuvent être ignorés ou échouer avec un message clair si non configurés.
+
+## Principaux endpoints
+
+| Méthode | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/auth/register` | Register (client/partner/admin) |
-| POST | `/api/auth/login` | Login, returns JWT |
-| POST | `/api/auth/verify-email` | Verify email with token |
-| GET | `/api/users/profile` | Current user (auth) |
-| PUT | `/api/users/profile` | Update profile (auth) |
-| POST | `/api/missions` | Create mission + optional photo (client) |
-| GET | `/api/missions` | List: client = own; partner = nearby (lat, lng, radius) or assigned |
-| GET | `/api/missions/:id` | Mission details |
-| PUT | `/api/missions/:id/accept` | Partner accepts |
-| PUT | `/api/missions/:id/collect` | Partner marks collected |
-| PUT | `/api/missions/:id/status` | Partner sets collected / in_transit |
-| PUT | `/api/missions/:id/deliver` | Partner delivers (triggers payment) |
-| PUT | `/api/missions/:id/cancel` | Cancel mission |
-| POST | `/api/payments/create-checkout` | Stripe checkout for mission (client) |
-| POST | `/api/payments/webhook` | Stripe webhook (raw body) |
-| GET | `/api/payments/earnings` | Partner earnings (auth) |
-| POST | `/api/payments/payout` | Partner request payout (Stripe Connect) |
-| GET | `/api/notifications` | List notifications (auth) |
-| PUT | `/api/notifications/:id/read` | Mark read |
-| POST | `/api/notifications/send` | Admin send notification |
+| POST | `/api/auth/register` | Inscription (client/partenaire/admin) |
+| POST | `/api/auth/login` | Connexion, renvoie un JWT |
+| POST | `/api/auth/verify-email` | Vérification email par token |
+| GET | `/api/users/profile` | Utilisateur courant (auth) |
+| PUT | `/api/users/profile` | Mise à jour du profil (auth) |
+| POST | `/api/missions` | Créer une mission + photo optionnelle (client) |
+| GET | `/api/missions` | Liste : client = les siennes ; partenaire = à proximité (lat, lng, rayon) ou assignées |
+| GET | `/api/missions/:id` | Détail d’une mission |
+| PUT | `/api/missions/:id/accept` | Le partenaire accepte |
+| PUT | `/api/missions/:id/collect` | Le partenaire marque comme collecté |
+| PUT | `/api/missions/:id/status` | Le partenaire met à jour (collecté / en transit) |
+| PUT | `/api/missions/:id/deliver` | Le partenaire livre (déclenche le paiement) |
+| PUT | `/api/missions/:id/cancel` | Annuler une mission |
+| POST | `/api/payments/create-checkout` | Checkout Stripe pour la mission (client) |
+| POST | `/api/payments/webhook` | Webhook Stripe (body brut) |
+| GET | `/api/payments/earnings` | Gains partenaire (auth) |
+| POST | `/api/payments/payout` | Demande de paiement partenaire (Stripe Connect) |
+| GET | `/api/notifications` | Liste des notifications (auth) |
+| PUT | `/api/notifications/:id/read` | Marquer comme lu |
+| POST | `/api/notifications/send` | Envoi de notification (admin) |
 
-## Pricing
+## Tarification
 
-- Small: 3€, Medium: 5€, Large: 8€
-- Platform commission: 20%
+- Petit : 3 €, Moyen : 5 €, Grand : 8 €
+- Commission plateforme : 20 %
 
-## Geospatial
+## Géolocalisation
 
-Partners see **available** missions within 500 m–1 km of `lat`/`lng` (PostGIS `ST_DWithin`). Use query params: `?lat=48.85&lng=2.35&radius=1000` (radius in meters).
+Les partenaires voient les missions **disponibles** dans un rayon de 500 m à 1 km autour de `lat`/`lng` (PostGIS `ST_DWithin`). Paramètres de requête : `?lat=48.85&lng=2.35&radius=1000` (rayon en mètres).
 
-## File structure
+## Structure des fichiers
 
 ```
 src/
@@ -125,16 +125,16 @@ src/
   controllers/  auth, users, missions, payments, notifications
   middleware/   auth, validation, errorHandler, upload
   models/       User, Mission, Transaction, Notification
-  routes/       index (all routes)
+  routes/       index (toutes les routes)
   services/     geoService, qrService, emailService, paymentService, uploadService
   utils/        logger, helpers, errors
-  validators/   express-validator chains
-  scripts/       migrate, seed
+  validators/   chaînes express-validator
+  scripts/      migrate, seed
   app.ts
   server.ts
   swagger.ts
 ```
 
-## License
+## Licence
 
 ISC
