@@ -57,33 +57,76 @@ export async function listUsers(req: Request, res: Response, next: NextFunction)
   }
 }
 
-/** GET /api/admin/stats – total users, active missions, platform revenue */
+/** GET /api/admin/stats – total users, active missions, platform revenue, 6-month growth */
 export async function stats(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user || req.user.role !== 'admin') {
       return next(new ForbiddenError('Admin only'));
     }
 
-    const [usersRes, activeRes, revenueRes] = await Promise.all([
-      pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM users'),
-      pool.query<{ count: string }>(
-        `SELECT COUNT(*)::text AS count FROM missions
-         WHERE status NOT IN ('delivered', 'cancelled')`
-      ),
-      pool.query<{ sum: string }>(
-        `SELECT COALESCE(SUM(commission), 0)::numeric::text AS sum FROM missions WHERE status = 'delivered'`
-      ),
-    ]);
+    const sixMonthsAgo = `date_trunc('month', CURRENT_DATE) - interval '6 months'`;
+
+    const [usersRes, activeRes, revenueRes, usersBeforeWindowRes, newUsersByMonthRes, revenueByMonthRes] =
+      await Promise.all([
+        pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM users'),
+        pool.query<{ count: string }>(
+          `SELECT COUNT(*)::text AS count FROM missions
+           WHERE status NOT IN ('delivered', 'cancelled')`
+        ),
+        pool.query<{ sum: string }>(
+          `SELECT COALESCE(SUM(commission), 0)::numeric::text AS sum FROM missions WHERE status = 'delivered'`
+        ),
+        pool.query<{ count: string }>(
+          `SELECT COUNT(*)::text AS count FROM users WHERE created_at < ${sixMonthsAgo}`
+        ),
+        pool.query<{ month: string; new_users: string }>(
+          `SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month, COUNT(*)::text AS new_users
+           FROM users WHERE created_at >= ${sixMonthsAgo}
+           GROUP BY date_trunc('month', created_at) ORDER BY 1`
+        ),
+        pool.query<{ month: string; revenue: string }>(
+          `SELECT to_char(date_trunc('month', completed_at), 'YYYY-MM') AS month, COALESCE(SUM(commission), 0)::numeric::text AS revenue
+           FROM missions WHERE status = 'delivered' AND completed_at IS NOT NULL AND completed_at >= ${sixMonthsAgo}
+           GROUP BY date_trunc('month', completed_at) ORDER BY 1`
+        ),
+      ]);
 
     const total_users = parseInt(usersRes.rows[0]?.count ?? '0', 10);
     const active_missions = parseInt(activeRes.rows[0]?.count ?? '0', 10);
     const revenue = parseFloat(revenueRes.rows[0]?.sum ?? '0');
+    let cumulativeUsers = parseInt(usersBeforeWindowRes.rows[0]?.count ?? '0', 10);
+
+    const newUsersMap = new Map<string, number>();
+    for (const row of newUsersByMonthRes.rows ?? []) {
+      newUsersMap.set(row.month, parseInt(row.new_users ?? '0', 10));
+    }
+    const revenueMap = new Map<string, number>();
+    for (const row of revenueByMonthRes.rows ?? []) {
+      revenueMap.set(row.month, parseFloat(row.revenue ?? '0'));
+    }
+
+    const growth: { month: string; users: number; revenue: number }[] = [];
+    const monthKeys: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    for (const month of monthKeys) {
+      cumulativeUsers += newUsersMap.get(month) ?? 0;
+      growth.push({
+        month,
+        users: cumulativeUsers,
+        revenue: revenueMap.get(month) ?? 0,
+      });
+    }
 
     res.json({
       success: true,
       total_users,
       active_missions,
       revenue,
+      growth,
     });
   } catch (e) {
     next(e);
