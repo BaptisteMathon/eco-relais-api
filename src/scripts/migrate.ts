@@ -72,6 +72,22 @@ const migrations = [
   `CREATE INDEX IF NOT EXISTS idx_missions_status ON missions(status);`,
   `CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);`,
   `CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);`,
+  `
+  CREATE TABLE IF NOT EXISTS disputes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    mission_id UUID NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+    raised_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open'
+      CHECK (status IN ('open', 'in_review', 'resolved')),
+    resolution TEXT,
+    resolved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+  );
+  `,
+  `CREATE INDEX IF NOT EXISTS idx_disputes_mission_id ON disputes(mission_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);`,
 ];
 
 async function run(): Promise<void> {
