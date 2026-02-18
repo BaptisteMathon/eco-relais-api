@@ -32,3 +32,6 @@ coverage/
 
 # Optional
 *.pem
+.githooks/README.md
+.githooks/commit-msg
+vitest.config.ts
