@@ -79,6 +79,26 @@ export async function webhook(req: Request, res: Response, next: NextFunction): 
   }
 }
 
+/** GET /api/payments – Client payment history (transactions for missions they created) */
+export async function history(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user || req.user.role !== 'client') return next(new ForbiddenError('Clients only'));
+    const transactions = await TransactionModel.listByClientId(req.user.userId);
+    res.json({
+      success: true,
+      data: transactions.map((t) => ({
+        id: t.id,
+        mission_id: t.mission_id,
+        amount: t.amount,
+        status: t.status,
+        created_at: t.created_at,
+      })),
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
 /** GET /api/payments/earnings – Partner earnings dashboard */
 export async function earnings(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {

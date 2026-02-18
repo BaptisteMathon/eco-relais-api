@@ -51,6 +51,19 @@ export async function listByPartnerId(partnerId: string): Promise<TransactionTyp
   return res.rows;
 }
 
+/** List transactions for missions where the given user is the client (client payment history) */
+export async function listByClientId(clientId: string): Promise<TransactionType[]> {
+  const res = await pool.query<TransactionType>(
+    `SELECT t.id, t.mission_id, t.partner_id, t.amount, t.stripe_payment_intent, t.status, t.created_at
+     FROM transactions t
+     INNER JOIN missions m ON m.id = t.mission_id
+     WHERE m.client_id = $1
+     ORDER BY t.created_at DESC`,
+    [clientId]
+  );
+  return res.rows;
+}
+
 export async function updateStatus(
   id: string,
   status: TransactionStatus
