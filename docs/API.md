@@ -445,6 +445,32 @@ Annuler une mission. Autorisé pour le client (propriétaire), le partenaire ass
 
 ## Paiements
 
+### GET /api/payments
+
+Historique des paiements (transactions) des missions créées par le client. **Rôle :** client uniquement.
+
+**En-têtes :** `Authorization: Bearer <token>` (client).
+
+**Succès :** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "mission_id": "uuid",
+      "amount": 4.5,
+      "status": "completed",
+      "created_at": "2026-02-17T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Erreurs :** `401` token manquant/invalide, `403` pas client.
+
+---
+
 ### POST /api/payments/create-checkout
 
 Créer une session Stripe Checkout pour une mission. **Rôle :** client (propriétaire de la mission).
@@ -530,6 +556,43 @@ Demander un virement vers le compte Stripe Connect du partenaire. **Rôle :** pa
 ```
 
 **Erreurs :** `400` Connect non lié / pas de solde / payout non configuré, `401`/`403`.
+
+---
+
+## Litiges (disputes)
+
+### POST /api/disputes
+
+Ouvrir un litige sur une mission. **Rôle :** client ou partenaire (propriétaire ou partenaire assigné de la mission).
+
+**En-têtes :** `Authorization: Bearer <token>` requis.
+
+**Corps :**
+
+| Champ       | Type   | Obligatoire | Description                |
+|------------|--------|-------------|----------------------------|
+| `mission_id` | string | oui       | UUID de la mission         |
+| `reason`   | string | oui         | Motif du litige (non vide) |
+
+**Succès :** `201 Created`
+```json
+{
+  "success": true,
+  "dispute": {
+    "id": "uuid",
+    "mission_id": "uuid",
+    "raised_by": "uuid",
+    "reason": "Colis non livré à l'heure",
+    "status": "open",
+    "resolution": null,
+    "resolved_by": null,
+    "created_at": "2026-02-17T10:00:00.000Z",
+    "resolved_at": null
+  }
+}
+```
+
+**Erreurs :** `400` validation, `401`/`403` pas client/partenaire ou mission non trouvée / pas votre mission, `404` mission introuvable.
 
 ---
 
@@ -636,9 +699,28 @@ Statistiques globales (nombre d’utilisateurs, missions actives, revenus platef
 
 ### GET /api/admin/users
 
-Liste des utilisateurs (avec filtres optionnels par rôle).
+Liste des utilisateurs avec pagination. **Rôle :** admin uniquement.
 
-**Succès :** `200 OK` — `{ "success": true, "users": [...] }`.
+**En-têtes :** `Authorization: Bearer <token>` (admin).
+
+**Query (optionnels) :**
+
+| Param  | Type   | Description                                    |
+|--------|--------|------------------------------------------------|
+| `role` | string | Filtrer : `client`, `partner`, `admin`         |
+| `page` | number | Page (défaut 1)                                |
+| `limit`| number | Éléments par page (défaut 15, max 100)        |
+
+**Succès :** `200 OK`
+```json
+{
+  "success": true,
+  "data": [ { "id": "uuid", "email": "...", "role": "client", "first_name": "...", "last_name": "...", "phone": null, "address_lat": null, "address_lng": null, "created_at": "...", "verified": false, "stripe_account_id": null } ],
+  "total": 42,
+  "page": 1,
+  "limit": 15
+}
+```
 
 **Erreurs :** `401`/`403`.
 
@@ -646,9 +728,13 @@ Liste des utilisateurs (avec filtres optionnels par rôle).
 
 ### GET /api/admin/missions
 
-Liste de toutes les missions (avec filtres optionnels par statut).
+Liste de toutes les missions (avec filtre optionnel par statut). **Rôle :** admin uniquement.
 
-**Succès :** `200 OK` — `{ "success": true, "missions": [...] }`.
+**En-têtes :** `Authorization: Bearer <token>` (admin).
+
+**Query (optionnel) :** `status` — `pending`, `accepted`, `collected`, `in_transit`, `delivered`, `cancelled`. Limite 500 résultats.
+
+**Succès :** `200 OK` — `{ "success": true, "data": [...], "total": n, "page": 1, "limit": 500 }`.
 
 **Erreurs :** `401`/`403`.
 
@@ -656,11 +742,73 @@ Liste de toutes les missions (avec filtres optionnels par statut).
 
 ### GET /api/admin/disputes
 
-Liste des litiges. Actuellement en stub (tableau vide si aucune table dédiée).
+Liste des litiges (table `disputes`). **Rôle :** admin uniquement.
 
-**Succès :** `200 OK` — `{ "success": true, "disputes": [] }`.
+**En-têtes :** `Authorization: Bearer <token>` (admin).
+
+**Query (optionnel) :**
+
+| Param  | Type   | Description                              |
+|--------|--------|------------------------------------------|
+| `status` | string | Filtrer : `open`, `in_review`, `resolved` |
+
+**Succès :** `200 OK`
+```json
+{
+  "success": true,
+  "disputes": [
+    {
+      "id": "uuid",
+      "mission_id": "uuid",
+      "raised_by": "uuid",
+      "reason": "Colis non livré",
+      "status": "open",
+      "resolution": null,
+      "resolved_by": null,
+      "created_at": "2026-02-17T10:00:00.000Z",
+      "resolved_at": null
+    }
+  ]
+}
+```
 
 **Erreurs :** `401`/`403`.
+
+---
+
+### PATCH /api/admin/disputes/:id/resolve
+
+Résoudre un litige (statut → `resolved`, enregistrement de la résolution). **Rôle :** admin uniquement.
+
+**En-têtes :** `Authorization: Bearer <token>` (admin).
+
+**Params :** `id` — UUID du litige.
+
+**Corps :**
+
+| Champ        | Type   | Obligatoire | Description           |
+|-------------|--------|-------------|-----------------------|
+| `resolution`| string | oui         | Notes de résolution   |
+
+**Succès :** `200 OK`
+```json
+{
+  "success": true,
+  "dispute": {
+    "id": "uuid",
+    "mission_id": "uuid",
+    "raised_by": "uuid",
+    "reason": "...",
+    "status": "resolved",
+    "resolution": "Remboursement effectué.",
+    "resolved_by": "uuid-admin",
+    "created_at": "...",
+    "resolved_at": "2026-02-17T12:00:00.000Z"
+  }
+}
+```
+
+**Erreurs :** `400` resolution vide, `401`/`403`, `404` litige introuvable.
 
 ---
 
@@ -682,10 +830,12 @@ Liste des litiges. Actuellement en stub (tableau vide si aucune table dédiée).
 | PUT | /api/missions/:id/status | JWT | partner | 200 |
 | PUT | /api/missions/:id/deliver | JWT | partner | 200 |
 | PUT | /api/missions/:id/cancel | JWT | client/partner/admin | 200 |
+| GET | /api/payments | JWT | client | 200 |
 | POST | /api/payments/create-checkout | JWT | client | 200 |
 | POST | /api/payments/webhook | Stripe-Signature | — | 200 |
 | GET | /api/payments/earnings | JWT | partner | 200 |
 | POST | /api/payments/payout | JWT | partner | 200 |
+| POST | /api/disputes | JWT | client/partner | 201 |
 | GET | /api/notifications | JWT | tout | 200 |
 | PUT | /api/notifications/:id/read | JWT | tout | 200 |
 | POST | /api/notifications/send | JWT | admin | 201 |
@@ -693,6 +843,7 @@ Liste des litiges. Actuellement en stub (tableau vide si aucune table dédiée).
 | GET | /api/admin/users | JWT | admin | 200 |
 | GET | /api/admin/missions | JWT | admin | 200 |
 | GET | /api/admin/disputes | JWT | admin | 200 |
+| PATCH | /api/admin/disputes/:id/resolve | JWT | admin | 200 |
 
 ---
 
