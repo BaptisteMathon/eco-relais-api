@@ -23,6 +23,7 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
         first_name: user.first_name,
         last_name: user.last_name,
         phone: user.phone,
+        address: (user as { address?: string | null }).address ?? null,
         address_lat: user.address_lat,
         address_lng: user.address_lng,
         verified: user.verified,
@@ -39,11 +40,12 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
 export async function updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user) return next(new NotFoundError('User not found'));
-    const { first_name, last_name, phone, address_lat, address_lng } = req.body;
+    const { first_name, last_name, phone, address, address_lat, address_lng } = req.body;
     const user = await UserModel.updateUser(req.user.userId, {
       first_name,
       last_name,
       phone,
+      address,
       address_lat,
       address_lng,
     });
@@ -57,6 +59,7 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
         first_name: user.first_name,
         last_name: user.last_name,
         phone: user.phone,
+        address: (user as { address?: string | null }).address ?? null,
         address_lat: user.address_lat,
         address_lng: user.address_lng,
         verified: user.verified,

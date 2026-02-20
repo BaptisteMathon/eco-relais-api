@@ -59,6 +59,7 @@ export async function updateUser(
     first_name: string;
     last_name: string;
     phone: string;
+    address: string;
     address_lat: number;
     address_lng: number;
     verified: boolean;
@@ -79,6 +80,10 @@ export async function updateUser(
   if (data.phone !== undefined) {
     fields.push(`phone = $${i++}`);
     values.push(data.phone);
+  }
+  if (data.address !== undefined) {
+    fields.push(`address = $${i++}`);
+    values.push(data.address);
   }
   if (data.address_lat !== undefined) {
     fields.push(`address_lat = $${i++}`);
