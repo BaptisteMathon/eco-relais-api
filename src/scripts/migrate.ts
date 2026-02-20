@@ -88,6 +88,7 @@ const migrations = [
   `,
   `CREATE INDEX IF NOT EXISTS idx_disputes_mission_id ON disputes(mission_id);`,
   `CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;`,
 ];
 
 async function run(): Promise<void> {

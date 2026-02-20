@@ -98,6 +98,28 @@ Notifications in-app envoyées aux utilisateurs.
 
 ---
 
+### 5. `disputes`
+
+Litiges liés aux missions (ouverture par client/partenaire, résolution par l’admin).
+
+| Colonne      | Type              | Contraintes / remarques                          |
+|--------------|-------------------|---------------------------------------------------|
+| id           | UUID              | PK, `uuid_generate_v4()`                          |
+| mission_id   | UUID              | NOT NULL, FK → missions(id) ON DELETE CASCADE   |
+| raised_by    | UUID              | NOT NULL, FK → users(id) ON DELETE CASCADE      |
+| reason       | TEXT              | NOT NULL                                         |
+| status       | VARCHAR(20)       | NOT NULL, DEFAULT `'open'`                       |
+| resolution   | TEXT              | nullable (rempli à la résolution)               |
+| resolved_by  | UUID              | nullable, FK → users(id) ON DELETE SET NULL      |
+| created_at   | TIMESTAMPTZ       | DEFAULT NOW()                                    |
+| resolved_at  | TIMESTAMPTZ       | nullable                                         |
+
+**Statuts :** `open` \| `in_review` \| `resolved`.
+
+**Index :** `idx_disputes_mission_id` sur `mission_id`, `idx_disputes_status` sur `status`.
+
+---
+
 ## Relations
 
 ```
@@ -105,18 +127,24 @@ users
   ├── missions (client_id)   — missions créées par le client
   ├── missions (partner_id)  — missions acceptées par le partenaire
   ├── transactions (partner_id) — rémunérations du partenaire
-  └── notifications (user_id)   — notifications reçues
+  ├── notifications (user_id)   — notifications reçues
+  ├── disputes (raised_by)      — litiges ouverts par l’utilisateur
+  └── disputes (resolved_by)    — litiges résolus par l’admin
 
 missions
   ├── transactions (mission_id) — une transaction par mission livrée
+  ├── disputes (mission_id)     — litiges liés à la mission
   └── users (client_id, partner_id)
+
+disputes
+  └── users (raised_by, resolved_by), missions (mission_id)
 ```
 
 ---
 
 ## À noter
 
-- **Litiges :** il n’existe pas de table `disputes`. L’endpoint `GET /admin/disputes` est un stub (tableau vide).
+- **Litiges :** la table `disputes` est utilisée par `POST /disputes` (création client/partenaire), `GET /admin/disputes` et `PATCH /admin/disputes/:id/resolve`.
 - **PostGIS :** si l’extension est activée, les requêtes « missions à proximité » peuvent s’appuyer sur des fonctions spatiales ; sinon le backend utilise une approximation en degrés.
 
 *Schéma défini dans `src/scripts/migrate.ts`.*
