@@ -4,9 +4,11 @@
 
 import Stripe from 'stripe';
 
-const secretKey = process.env.STRIPE_SECRET_KEY;
+const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
 if (!secretKey) {
   console.warn('STRIPE_SECRET_KEY is not set. Payment features will be disabled.');
+} else {
+  console.info('Stripe: configured (payments enabled).');
 }
 
 export const stripe = secretKey

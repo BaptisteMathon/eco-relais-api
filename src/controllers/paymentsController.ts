@@ -35,8 +35,8 @@ export async function createCheckout(req: Request, res: Response, next: NextFunc
       missionId: mission_id,
       amountEuros: mission.price,
       clientEmail: user.email,
-      successUrl: success_url || `${process.env.DASHBOARD_URL || 'https://app.eco-relais.com'}/missions/${mission_id}?success=1`,
-      cancelUrl: cancel_url || `${process.env.DASHBOARD_URL || 'https://app.eco-relais.com'}/missions`,
+      successUrl: success_url || `${process.env.DASHBOARD_URL || 'https://app.eco-relais.com'}/client/missions/${mission_id}?success=1`,
+      cancelUrl: cancel_url || `${process.env.DASHBOARD_URL || 'https://app.eco-relais.com'}/client/missions`,
     });
     res.json({ success: true, url, session_id: sessionId });
   } catch (e) {
