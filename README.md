@@ -135,6 +135,16 @@ src/
   swagger.ts
 ```
 
+## Déploiement Vercel
+
+Le projet est configuré pour Vercel via `vercel.json` et `api/index.js` :
+
+- **Build :** Vercel exécute `npm run build` (tsc) pour produire `dist/`.
+- **Entry :** Toutes les requêtes sont réécrites vers `/api`, géré par `api/index.js`, qui exporte l’app Express (`dist/app.js`).
+- **Variables d’environnement :** À définir dans le projet Vercel (PG_*, JWT_SECRET, CORS_ORIGIN / DASHBOARD_URL, etc.).
+
+L’URL de l’API en prod (ex. `https://eco-relais-api.vercel.app`) doit être utilisée côté front avec `NEXT_PUBLIC_API_URL=https://eco-relais-api.vercel.app/api`.
+
 ## Licence
 
 ISC

@@ -91,7 +91,7 @@ export async function list(req: Request, res: Response, next: NextFunction): Pro
   }
 }
 
-/** GET /api/missions/:id */
+/** GET /api/missions/:id – include partner and client for detail view */
 export async function getById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const mission = await MissionModel.getById(req.params.id);
@@ -103,7 +103,32 @@ export async function getById(req: Request, res: Response, next: NextFunction): 
         return next(new ForbiddenError('Access denied'));
       }
     }
-    res.json({ success: true, mission });
+    const [partner, client] = await Promise.all([
+      mission.partner_id ? UserModel.getById(mission.partner_id) : null,
+      mission.client_id ? UserModel.getById(mission.client_id) : null,
+    ]);
+    const payload = {
+      ...mission,
+      partner: partner
+        ? {
+            id: partner.id,
+            email: partner.email,
+            first_name: partner.first_name,
+            last_name: partner.last_name,
+            role: partner.role,
+          }
+        : undefined,
+      client: client
+        ? {
+            id: client.id,
+            email: client.email,
+            first_name: client.first_name,
+            last_name: client.last_name,
+            role: client.role,
+          }
+        : undefined,
+    };
+    res.json({ success: true, mission: payload });
   } catch (e) {
     next(e);
   }

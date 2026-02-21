@@ -11,12 +11,14 @@ import { updateProfileValidator } from '../validators/userValidators';
 import { createMissionValidator, missionIdValidator, collectValidator, statusValidator} from '../validators/missionValidators';
 import { createCheckoutValidator } from '../validators/paymentValidators';
 import { notificationIdValidator, sendNotificationValidator } from '../validators/notificationValidators';
+import { createDisputeValidator, resolveDisputeValidator } from '../validators/disputeValidators';
 import { register as authRegister, login as authLogin, verifyEmail as authVerifyEmail } from '../controllers/authController';
 import { getProfile, updateProfile } from '../controllers/usersController';
 import { create as missionCreate, list as missionList, getById as missionGetById, accept as missionAccept, collect as missionCollect, deliver as missionDeliver, cancel as missionCancel, updateStatus as missionUpdateStatus} from '../controllers/missionsController';
 import { history as paymentsHistory, createCheckout as paymentsCreateCheckout, earnings as paymentsEarnings, payout as paymentsPayout } from '../controllers/paymentsController';
+import { createDispute as disputesCreateDispute } from '../controllers/disputesController';
 import { list as notificationsList, markRead as notificationsMarkRead, send as notificationsSend } from '../controllers/notificationsController';
-import { stats as adminStats, listUsers as adminListUsers, listMissions as adminListMissions, listDisputes as adminListDisputes } from '../controllers/adminController';
+import { stats as adminStats, listUsers as adminListUsers, listMissions as adminListMissions, listDisputes as adminListDisputes, resolveDispute as adminResolveDispute } from '../controllers/adminController';
 
 const router = Router();
 
@@ -86,6 +88,15 @@ router.post(
 router.get('/payments/earnings', requireAuth, requireRole('partner'), paymentsEarnings);
 router.post('/payments/payout', requireAuth, requireRole('partner'), paymentsPayout);
 
+// —— Disputes (client/partner raise) ——
+router.post(
+  '/disputes',
+  requireAuth,
+  requireRole('client', 'partner'),
+  validate(createDisputeValidator),
+  disputesCreateDispute
+);
+
 // —— Notifications ——
 router.get('/notifications', requireAuth, notificationsList);
 router.put(
@@ -107,5 +118,12 @@ router.get('/admin/stats', requireAuth, requireRole('admin'), adminStats);
 router.get('/admin/users', requireAuth, requireRole('admin'), adminListUsers);
 router.get('/admin/missions', requireAuth, requireRole('admin'), adminListMissions);
 router.get('/admin/disputes', requireAuth, requireRole('admin'), adminListDisputes);
+router.patch(
+  '/admin/disputes/:id/resolve',
+  requireAuth,
+  requireRole('admin'),
+  validate(resolveDisputeValidator),
+  adminResolveDispute
+);
 
 export default router;

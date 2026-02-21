@@ -1,10 +1,12 @@
 /**
- * Admin: stats, users list, missions list, disputes stub
+ * Admin: stats, users list, missions list, disputes list and resolve
  */
 
 import { Request, Response, NextFunction } from 'express';
 import { pool } from '../config/db';
-import { ForbiddenError } from '../utils/errors';
+import * as DisputeModel from '../models/Dispute';
+import { ForbiddenError, NotFoundError } from '../utils/errors';
+import type { DisputeStatus } from '../types';
 
 /** GET /api/admin/users – list users with optional role filter and pagination */
 export async function listUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -15,7 +17,7 @@ export async function listUsers(req: Request, res: Response, next: NextFunction)
 
     const role = req.query.role as string | undefined;
     const page = Math.max(1, parseInt(String(req.query.page || 1), 10));
-    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || 20), 10)));
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || 15), 10)));
     const offset = (page - 1) * limit;
 
     const validRoles = ['client', 'partner', 'admin'];
@@ -164,13 +166,34 @@ export async function listMissions(req: Request, res: Response, next: NextFuncti
   }
 }
 
-/** GET /api/admin/disputes – list disputes (stub: no table yet, returns empty array) */
+/** GET /api/admin/disputes – list all disputes (optional status filter) */
 export async function listDisputes(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user || req.user.role !== 'admin') {
       return next(new ForbiddenError('Admin only'));
     }
-    res.json([]);
+    const status = req.query.status as DisputeStatus | undefined;
+    const disputes = await DisputeModel.listAll(
+      status && ['open', 'in_review', 'resolved'].includes(status) ? { status } : undefined
+    );
+    res.json({ success: true, disputes });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** PATCH /api/admin/disputes/:id/resolve – resolve a dispute */
+export async function resolveDispute(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      return next(new ForbiddenError('Admin only'));
+    }
+    const { id } = req.params;
+    const { resolution } = req.body as { resolution: string };
+    const dispute = await DisputeModel.getById(id);
+    if (!dispute) return next(new NotFoundError('Dispute not found'));
+    const updated = await DisputeModel.resolveDispute(id, resolution, req.user.userId);
+    res.json({ success: true, dispute: updated });
   } catch (e) {
     next(e);
   }
