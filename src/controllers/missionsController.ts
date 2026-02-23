@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as MissionModel from '../models/Mission';
 import * as UserModel from '../models/User';
+import * as NotificationModel from '../models/Notification';
 import * as TransactionModel from '../models/Transaction';
 import { calculateMissionPricing } from '../utils/helpers';
 import { generateMissionQR } from '../services/qrService';
@@ -143,6 +144,11 @@ export async function accept(req: Request, res: Response, next: NextFunction): P
     if (mission.status !== 'pending') throw new BadRequestError('Mission is not available');
     const updated = await MissionModel.setPartner(mission.id, req.user.userId);
     if (!updated) return next(new NotFoundError('Mission not found or already accepted'));
+    NotificationModel.create({
+      user_id: mission.client_id,
+      type: 'mission_accepted',
+      message: `Votre colis "${mission.package_title}" a été pris en charge par un Voisin-Relais.`,
+    }).catch(() => {});
     res.json({ success: true, mission: updated });
   } catch (e) {
     next(e);
@@ -160,6 +166,11 @@ export async function collect(req: Request, res: Response, next: NextFunction): 
     if (mission.status !== 'accepted') throw new BadRequestError('Invalid status for collect');
     // Optional: verify qr_payload matches mission.id
     const updated = await MissionModel.updateMissionStatus(mission.id, 'collected');
+    NotificationModel.create({
+      user_id: mission.client_id,
+      type: 'mission_collected',
+      message: `Votre colis "${mission.package_title}" a été récupéré, il est en route !`,
+    }).catch(() => {});
     res.json({ success: true, mission: updated });
   } catch (e) {
     next(e);
@@ -210,6 +221,11 @@ export async function deliver(req: Request, res: Response, next: NextFunction): 
       undefined,
       completedAt
     );
+    NotificationModel.create({
+      user_id: mission.client_id,
+      type: 'delivery_completed',
+      message: `Votre colis "${mission.package_title}" a été livré avec succès !`,
+    }).catch(() => {});
     res.json({ success: true, mission: updated });
   } catch (e) {
     next(e);
@@ -231,6 +247,19 @@ export async function cancel(req: Request, res: Response, next: NextFunction): P
       throw new BadRequestError('Mission cannot be cancelled');
     }
     const updated = await MissionModel.updateMissionStatus(mission.id, 'cancelled');
+    if (isClient && mission.partner_id) {
+      NotificationModel.create({
+        user_id: mission.partner_id,
+        type: 'mission_cancelled',
+        message: `La mission "${mission.package_title}" a été annulée par le client.`,
+      }).catch(() => {});
+    } else if (!isClient) {
+      NotificationModel.create({
+        user_id: mission.client_id,
+        type: 'mission_cancelled',
+        message: `Votre mission "${mission.package_title}" a été annulée par le Voisin-Relais.`,
+      }).catch(() => {});
+    }
     res.json({ success: true, mission: updated });
   } catch (e) {
     next(e);
@@ -248,6 +277,13 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
     const allowed = ['collected', 'in_transit'] as const;
     if (!allowed.includes(status as any)) throw new BadRequestError('Invalid status transition');
     const updated = await MissionModel.updateMissionStatus(mission.id, status as any);
+    if (status === 'in_transit') {
+      NotificationModel.create({
+        user_id: mission.client_id,
+        type: 'mission_in_transit',
+        message: `Votre colis "${mission.package_title}" est en cours de livraison !`,
+      }).catch(() => {});
+    }
     res.json({ success: true, mission: updated });
   } catch (e) {
     next(e);
