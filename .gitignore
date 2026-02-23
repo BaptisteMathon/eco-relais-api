@@ -35,3 +35,4 @@ coverage/
 .githooks/README.md
 .githooks/commit-msg
 vitest.config.ts
+node_modules
