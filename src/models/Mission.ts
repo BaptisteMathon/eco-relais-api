@@ -51,14 +51,28 @@ export async function createMission(data: {
 }
 
 export async function getById(id: string): Promise<MissionType | null> {
-  const res = await pool.query<MissionType>('SELECT * FROM missions WHERE id = $1', [id]);
+  const res = await pool.query<MissionType>(
+    `SELECT m.*,
+       c.first_name AS client_first_name,  c.last_name AS client_last_name,
+       p.first_name AS partner_first_name, p.last_name AS partner_last_name
+     FROM missions m
+     LEFT JOIN users c ON c.id = m.client_id
+     LEFT JOIN users p ON p.id = m.partner_id
+     WHERE m.id = $1`,
+    [id]
+  );
   return res.rows[0] ?? null;
 }
 
-/** List missions for a client (their own missions) */
+/** List missions for a client — joins partner name when assigned */
 export async function listByClientId(clientId: string): Promise<MissionType[]> {
   const res = await pool.query<MissionType>(
-    'SELECT * FROM missions WHERE client_id = $1 ORDER BY created_at DESC',
+    `SELECT m.*,
+       p.first_name AS partner_first_name, p.last_name AS partner_last_name
+     FROM missions m
+     LEFT JOIN users p ON p.id = m.partner_id
+     WHERE m.client_id = $1
+     ORDER BY m.created_at DESC`,
     [clientId]
   );
   return res.rows;
@@ -75,7 +89,10 @@ export async function listNearbyAvailable(
   const radiusNum = Number(radiusMeters); // safe to interpolate (number)
   try {
     const res = await pool.query<MissionType>(
-      `SELECT m.* FROM missions m
+      `SELECT m.*,
+         c.first_name AS client_first_name, c.last_name AS client_last_name
+       FROM missions m
+       LEFT JOIN users c ON c.id = m.client_id
        WHERE m.status = 'pending'
        AND ST_DWithin(
          ST_MakePoint(m.pickup_lng, m.pickup_lat)::geography,
@@ -93,7 +110,10 @@ export async function listNearbyAvailable(
   } catch {
     // Fallback when PostGIS is not installed: approximate distance (degrees)
     const res = await pool.query<MissionType>(
-      `SELECT m.* FROM missions m
+      `SELECT m.*,
+         c.first_name AS client_first_name, c.last_name AS client_last_name
+       FROM missions m
+       LEFT JOIN users c ON c.id = m.client_id
        WHERE m.status = 'pending'
        AND (m.pickup_lat - $1) * (m.pickup_lat - $1) + (m.pickup_lng - $2) * (m.pickup_lng - $2) <= $3
        ORDER BY (m.pickup_lat - $1) * (m.pickup_lat - $1) + (m.pickup_lng - $2) * (m.pickup_lng - $2)
@@ -104,10 +124,15 @@ export async function listNearbyAvailable(
   }
 }
 
-/** List missions assigned to a partner */
+/** List missions assigned to a partner — joins client name */
 export async function listByPartnerId(partnerId: string): Promise<MissionType[]> {
   const res = await pool.query<MissionType>(
-    'SELECT * FROM missions WHERE partner_id = $1 ORDER BY created_at DESC',
+    `SELECT m.*,
+       c.first_name AS client_first_name, c.last_name AS client_last_name
+     FROM missions m
+     LEFT JOIN users c ON c.id = m.client_id
+     WHERE m.partner_id = $1
+     ORDER BY m.created_at DESC`,
     [partnerId]
   );
   return res.rows;

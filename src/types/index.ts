@@ -63,6 +63,11 @@ export interface Mission {
   qr_code: string | null;
   created_at: Date;
   completed_at: Date | null;
+  // Joined fields (optional — present when queries JOIN users)
+  client_first_name?: string;
+  client_last_name?: string;
+  partner_first_name?: string;
+  partner_last_name?: string;
 }
 
 export interface Transaction {
