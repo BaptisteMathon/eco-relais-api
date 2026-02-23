@@ -16,6 +16,20 @@ export type MissionStatus =
 
 export type TransactionStatus = 'pending' | 'completed' | 'failed';
 
+export type DisputeStatus = 'open' | 'in_review' | 'resolved';
+
+export interface Dispute {
+  id: string;
+  mission_id: string;
+  raised_by: string;
+  reason: string;
+  status: DisputeStatus;
+  resolution: string | null;
+  resolved_by: string | null;
+  created_at: Date;
+  resolved_at: Date | null;
+}
+
 export interface User {
   id: string;
   email: string;

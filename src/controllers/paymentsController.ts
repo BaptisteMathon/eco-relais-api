@@ -35,8 +35,8 @@ export async function createCheckout(req: Request, res: Response, next: NextFunc
       missionId: mission_id,
       amountEuros: mission.price,
       clientEmail: user.email,
-      successUrl: success_url || `${process.env.DASHBOARD_URL || 'https://app.eco-relais.com'}/missions/${mission_id}?success=1`,
-      cancelUrl: cancel_url || `${process.env.DASHBOARD_URL || 'https://app.eco-relais.com'}/missions`,
+      successUrl: success_url || `${process.env.DASHBOARD_URL || 'https://app.eco-relais.com'}/client/missions/${mission_id}?success=1`,
+      cancelUrl: cancel_url || `${process.env.DASHBOARD_URL || 'https://app.eco-relais.com'}/client/missions`,
     });
     res.json({ success: true, url, session_id: sessionId });
   } catch (e) {
@@ -74,6 +74,26 @@ export async function webhook(req: Request, res: Response, next: NextFunction): 
       }
     }
     res.json({ received: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** GET /api/payments – Client payment history (transactions for missions they created) */
+export async function history(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user || req.user.role !== 'client') return next(new ForbiddenError('Clients only'));
+    const transactions = await TransactionModel.listByClientId(req.user.userId);
+    res.json({
+      success: true,
+      data: transactions.map((t) => ({
+        id: t.id,
+        mission_id: t.mission_id,
+        amount: t.amount,
+        status: t.status,
+        created_at: t.created_at,
+      })),
+    });
   } catch (e) {
     next(e);
   }

@@ -46,6 +46,29 @@ describe('Payments API', () => {
     });
   });
 
+  describe('GET /api/payments', () => {
+    it('returns 401 without auth', async () => {
+      const res = await request(app).get('/api/payments');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 200 and payment history shape for client', async () => {
+      const res = await request(app)
+        .get('/api/payments')
+        .set('Authorization', `Bearer ${clientToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);
+    });
+
+    it('returns 403 for partner', async () => {
+      const res = await request(app)
+        .get('/api/payments')
+        .set('Authorization', `Bearer ${partnerToken}`);
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe('GET /api/payments/earnings', () => {
     it('returns 401 without auth', async () => {
       const res = await request(app).get('/api/payments/earnings');

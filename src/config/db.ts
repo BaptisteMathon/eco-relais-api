@@ -5,6 +5,9 @@
 
 import { Pool, PoolConfig } from 'pg';
 
+const sslMode = process.env.PGSSLMODE || process.env.SSLMODE;
+const useSsl = sslMode === 'require' || sslMode === 'verify-full' || sslMode === 'verify-ca';
+
 const config: PoolConfig = {
   host: process.env.PG_HOST || 'localhost',
   port: parseInt(process.env.PG_PORT || '5432', 10),
@@ -14,6 +17,7 @@ const config: PoolConfig = {
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
+  ...(useSsl && { ssl: true }),
 };
 
 export const pool = new Pool(config);
