@@ -1,0 +1,13 @@
+/**
+ * Express type extensions
+ */
+
+import type { JwtPayload } from './types';
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
+    }
+  }
+}
