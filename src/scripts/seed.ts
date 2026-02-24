@@ -85,8 +85,6 @@ async function seed(): Promise<void> {
   const client = await pool.connect();
 
   try {
-    const password_hash = await bcrypt.hash(PASSWORD, SALT_ROUNDS);
-
     // —— Users ——
     const alice = await ensureUser('client@eco-relais.test', 'client', {
       first_name: 'Alice',
@@ -204,6 +202,7 @@ async function seed(): Promise<void> {
         delivery_lat: PARIS.rivoli.lat,
         delivery_lng: PARIS.rivoli.lng,
       });
+      await MissionModel.setPartner(m5.id, david.id);
       console.log('Created mission 5 (pending)');
 
       const m6 = await createMissionWithQr(alice.id, {

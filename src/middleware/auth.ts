@@ -6,8 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { JwtPayload, UserRole } from '../types';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
+import { JWT_SECRET } from '../config/jwt';
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;

@@ -4,13 +4,13 @@
 
 import { Request, Response, NextFunction } from 'express';
 import Stripe from 'stripe';
-import { stripe, STRIPE_WEBHOOK_SECRET, isStripeConfigured } from '../config/stripe';
+import { stripe, STRIPE_WEBHOOK_SECRET } from '../config/stripe';
 import { createCheckoutSession, createTransferToPartner } from '../services/paymentService';
 import * as MissionModel from '../models/Mission';
 import * as TransactionModel from '../models/Transaction';
 import * as UserModel from '../models/User';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
-import { centsToEuros, eurosToCents } from '../utils/helpers';
+import { eurosToCents } from '../utils/helpers';
 
 /** POST /api/payments/create-checkout */
 export async function createCheckout(req: Request, res: Response, next: NextFunction): Promise<void> {

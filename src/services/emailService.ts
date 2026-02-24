@@ -16,7 +16,6 @@ export async function sendVerificationEmail(email: string, token: string): Promi
 export async function sendMissionNotification(
   email: string,
   subject: string,
-  body: string
 ): Promise<void> {
   logger.info('Send mission notification (stub)', { email, subject });
   // TODO: implement
