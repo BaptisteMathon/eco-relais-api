@@ -11,12 +11,12 @@ import { JwtPayload } from '../types';
 import { BadRequestError, UnauthorizedError } from '../utils/errors';
 import { sendVerificationEmail } from '../services/emailService';
 import { generateId } from '../utils/helpers';
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const SALT_ROUNDS = 12;
 
 function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 function toPayload(user: { id: string; email: string; role: UserRole }): JwtPayload {
