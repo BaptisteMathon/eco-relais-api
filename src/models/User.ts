@@ -34,7 +34,11 @@ export async function createUser(data: {
       data.stripe_account_id ?? null,
     ]
   );
-  return getById(id) as Promise<UserType>;
+  const user = await getById(id);
+  if (!user) {
+    throw new Error(`Failed to create user with ID ${id}`);
+  }
+  return user;
 }
 
 export async function getById(id: string): Promise<UserType | null> {
