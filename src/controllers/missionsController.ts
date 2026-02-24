@@ -12,8 +12,7 @@ import { generateMissionQR } from '../services/qrService';
 import { uploadToS3 } from '../services/uploadService';
 import { clampRadius } from '../services/geoService';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
-import { PackageSize } from '../types';
-import { getFirebaseAdmin } from '../config/firebase';
+import { MissionStatus, PackageSize } from '../types';
 import { createTransferToPartner } from '../services/paymentService';
 import { eurosToCents } from '../utils/helpers';
 
@@ -159,7 +158,6 @@ export async function accept(req: Request, res: Response, next: NextFunction): P
 export async function collect(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user || req.user.role !== 'partner') return next(new ForbiddenError('Partners only'));
-    const { qr_payload } = req.body as { qr_payload?: string };
     const mission = await MissionModel.getById(req.params.id);
     if (!mission) return next(new NotFoundError('Mission not found'));
     if (mission.partner_id !== req.user.userId) return next(new ForbiddenError('Not your mission'));
@@ -187,7 +185,10 @@ export async function deliver(req: Request, res: Response, next: NextFunction): 
     if (mission.status !== 'in_transit') throw new BadRequestError('Invalid status for deliver');
 
     const partnerAmount = mission.price - mission.commission;
-    const partner = await UserModel.getById(mission.partner_id!);
+    if(mission.partner_id === null) {
+      throw new Error('Mission has no assigned partner');
+    }
+    const partner = await UserModel.getById(mission.partner_id);
     const stripeAccountId = partner?.stripe_account_id;
 
     const transaction = await TransactionModel.createTransaction({
@@ -198,7 +199,7 @@ export async function deliver(req: Request, res: Response, next: NextFunction): 
     });
 
     if (stripeAccountId) {
-      try {
+     
         const transferId = await createTransferToPartner({
           amountCents: eurosToCents(partnerAmount),
           stripeAccountId,
@@ -207,9 +208,7 @@ export async function deliver(req: Request, res: Response, next: NextFunction): 
         if (transferId) {
           await TransactionModel.updateStatus(transaction.id, 'completed');
         }
-      } catch (_) {
-        // keep transaction as pending for manual handling
-      }
+
     } else {
       await TransactionModel.updateStatus(transaction.id, 'completed');
     }
@@ -274,9 +273,9 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
     const mission = await MissionModel.getById(req.params.id);
     if (!mission) return next(new NotFoundError('Mission not found'));
     if (mission.partner_id !== req.user.userId) return next(new ForbiddenError('Not your mission'));
-    const allowed = ['collected', 'in_transit'] as const;
-    if (!allowed.includes(status as any)) throw new BadRequestError('Invalid status transition');
-    const updated = await MissionModel.updateMissionStatus(mission.id, status as any);
+    const allowed = ['collected', 'in_transit'];
+    if (!allowed.includes(status)) throw new BadRequestError('Invalid status transition');
+    const updated = await MissionModel.updateMissionStatus(mission.id, status as MissionStatus);
     if (status === 'in_transit') {
       NotificationModel.create({
         user_id: mission.client_id,

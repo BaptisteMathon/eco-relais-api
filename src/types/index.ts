@@ -108,11 +108,3 @@ export interface JwtPayload {
   email: string;
   role: UserRole;
 }
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload;
-    }
-  }
-}

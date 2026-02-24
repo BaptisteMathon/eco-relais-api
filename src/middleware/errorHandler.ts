@@ -2,7 +2,7 @@
  * Central error handler – maps AppError to status and JSON response
  */
 
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
@@ -10,7 +10,6 @@ export function errorHandler(
   err: Error | AppError,
   _req: Request,
   res: Response,
-  _next: NextFunction
 ): void {
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
